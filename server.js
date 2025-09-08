@@ -22,10 +22,34 @@ app.use('/api/auth', authRoutes);
 app.use('/api/rooms', roomRoutes);
 
 app.get('/', (req, res) => {
-  res.json({ message: 'Room Management API is running!' });
+  res.json({ 
+    message: 'Room Management API is running!',
+    timestamp: new Date().toISOString(),
+    status: 'healthy'
+  });
+});
+
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+  });
 });
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+// Self-ping to prevent sleep (only in production)
+if (process.env.NODE_ENV === 'production') {
+  const https = require('https');
+  setInterval(() => {
+    https.get('https://room-management-backend-p2ys.onrender.com/health', (res) => {
+      console.log(`Self-ping: ${res.statusCode}`);
+    }).on('error', (err) => {
+      console.log('Self-ping error:', err.message);
+    });
+  }, 10 * 60 * 1000); // Every 10 minutes
+}
